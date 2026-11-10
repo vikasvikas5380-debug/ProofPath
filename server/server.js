@@ -38,13 +38,18 @@ app.get("/api/health", (req, res) => {
 
 // Start server
 const startServer = async () => {
-    await connectDB();
+    try {
+        await connectDB();
 
-    const PORT = process.env.PORT || 5000;
+        const PORT = process.env.PORT || 5000;
 
-    app.listen(PORT, () => {
-        console.log(`ProofPath server running on port ${PORT}`);
-    });
+        app.listen(PORT, "0.0.0.0", () => {
+            console.log(`ProofPath server running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error("Failed to start server:", error);
+        process.exit(1);
+    }
 };
 
 startServer();
