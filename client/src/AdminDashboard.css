@@ -1,0 +1,364 @@
+.admin-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.admin-welcome {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.admin-eyebrow {
+    color: #38bdf8;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+.admin-welcome h2 {
+    color: #f1f5f9;
+    font-size: 21px;
+    margin-top: 7px;
+}
+
+.admin-welcome p {
+    color: #8292a9;
+    font-size: 11px;
+    margin-top: 6px;
+}
+
+.admin-refresh-button {
+    padding: 10px 14px;
+    border: 1px solid #24516a;
+    border-radius: 7px;
+    background: #102b3c;
+    color: #38bdf8;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.admin-refresh-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 15px;
+}
+
+.admin-stat-card {
+    padding: 19px;
+    border: 1px solid #203047;
+    border-radius: 10px;
+    background: #101b2b;
+}
+
+.admin-stat-card > span {
+    display: block;
+    color: #8292a9;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+}
+
+.admin-stat-card strong {
+    display: block;
+    margin-top: 13px;
+    color: #f1f5f9;
+    font-size: 28px;
+}
+
+.admin-stat-card small {
+    display: block;
+    margin-top: 6px;
+    color: #64748b;
+    font-size: 9px;
+}
+
+.admin-overview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.admin-overview-panel {
+    min-width: 0;
+}
+
+.admin-role-row {
+    margin-bottom: 19px;
+}
+
+.admin-role-row:last-child {
+    margin-bottom: 0;
+}
+
+.admin-role-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 9px;
+    color: #a8b6c8;
+    font-size: 11px;
+    text-transform: capitalize;
+}
+
+.admin-role-info strong {
+    color: #e2e8f0;
+}
+
+.admin-progress-track {
+    height: 7px;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #26364c;
+}
+
+.admin-progress-fill {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #0891b2, #38bdf8);
+    transition: width 0.3s ease;
+}
+
+.admin-evidence-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid #1e2c40;
+    color: #a8b6c8;
+    font-size: 11px;
+    text-transform: capitalize;
+}
+
+.admin-evidence-row:last-child {
+    border-bottom: none;
+}
+
+.admin-evidence-row strong {
+    margin-left: auto;
+    color: #e2e8f0;
+}
+
+.admin-status-dot,
+.admin-account-status span {
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-radius: 50%;
+}
+
+.admin-status-dot.pending {
+    background: #facc15;
+}
+
+.admin-status-dot.verified {
+    background: #4ade80;
+}
+
+.admin-status-dot.approved {
+    background: #38bdf8;
+}
+
+.admin-status-dot.rejected {
+    background: #fb7185;
+}
+
+.admin-users-panel {
+    min-width: 0;
+}
+
+.admin-user-count {
+    padding: 6px 10px;
+    border: 1px solid #263b52;
+    border-radius: 20px;
+    color: #38bdf8;
+    background: #123449;
+    font-size: 10px;
+}
+
+.admin-users-table {
+    min-width: 720px;
+}
+
+.admin-user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-user-avatar {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 50%;
+    background: #164e63;
+    color: #67e8f9;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.admin-user-cell strong,
+.admin-user-cell span {
+    display: block;
+}
+
+.admin-user-cell strong {
+    color: #e2e8f0;
+    font-size: 10px;
+}
+
+.admin-user-cell span {
+    margin-top: 4px;
+    color: #718198;
+    font-size: 9px;
+}
+
+.admin-role-badge {
+    display: inline-block;
+    padding: 5px 8px;
+    border-radius: 5px;
+    background: #1c293b;
+    color: #94a3b8;
+    font-size: 9px;
+    text-transform: capitalize;
+}
+
+.admin-role-badge.admin {
+    background: #164e6355;
+    color: #67e8f9;
+}
+
+.admin-role-badge.investigator {
+    background: #312e8155;
+    color: #a5b4fc;
+}
+
+.admin-account-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 9px;
+    font-weight: 600;
+}
+
+.admin-account-status.active {
+    color: #4ade80;
+}
+
+.admin-account-status.active span {
+    background: #4ade80;
+}
+
+.admin-account-status.inactive {
+    color: #fb7185;
+}
+
+.admin-account-status.inactive span {
+    background: #fb7185;
+}
+
+.admin-user-action {
+    padding: 7px 10px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    font-size: 9px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.admin-user-action.deactivate {
+    border-color: #9f1239;
+    background: #88133730;
+    color: #fda4af;
+}
+
+.admin-user-action.activate {
+    border-color: #166534;
+    background: #14532d30;
+    color: #86efac;
+}
+
+.admin-user-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.admin-self-label {
+    color: #64748b;
+    font-size: 9px;
+}
+
+.admin-message {
+    padding: 12px 14px;
+    border-radius: 7px;
+    font-size: 11px;
+}
+
+.admin-error {
+    border: 1px solid #9f1239;
+    background: #88133730;
+    color: #fda4af;
+}
+
+.admin-success {
+    border: 1px solid #166534;
+    background: #14532d30;
+    color: #86efac;
+}
+
+.admin-loading {
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.admin-security-note {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #718198;
+    font-size: 10px;
+}
+
+.admin-security-note span {
+    color: #38bdf8;
+    font-size: 17px;
+}
+
+@media (max-width: 1000px) {
+    .admin-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 650px) {
+    .admin-overview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-welcome {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 400px) {
+    .admin-stats-grid {
+        gap: 9px;
+    }
+
+    .admin-stat-card {
+        padding: 13px;
+    }
+
+    .admin-stat-card strong {
+        font-size: 23px;
+    }
+}
