@@ -59,6 +59,12 @@ function App() {
     const [investigatorFilter, setInvestigatorFilter] = useState("all");
     const [reviewingEvidenceId, setReviewingEvidenceId] = useState("");
 
+    // EVIDENCE DELETION
+    const [deleteModalEvidence, setDeleteModalEvidence] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [deleteError, setDeleteError] = useState("");
+    const [deleteSuccess, setDeleteSuccess] = useState("");
+
     // PUBLIC QR VERIFICATION
     const [publicVerificationToken, setPublicVerificationToken] = useState(() => {
         const match = window.location.pathname.match(/^\/verify\/([^/]+)\/?$/);
@@ -487,6 +493,85 @@ function App() {
             );
         } finally {
             setReviewingEvidenceId("");
+        }
+    };
+
+    // CHECK IF CURRENT USER CAN DELETE A GIVEN EVIDENCE RECORD
+    const canDeleteEvidence = (item) => {
+        if (!user || !item) return false;
+        // Investigators are strictly blocked from deleting evidence
+        if (user.role === "investigator") return false;
+        // Admins can delete any evidence record
+        if (user.role === "admin") return true;
+        // Normal users can only delete their own uploaded evidence
+        if (user.role === "user") {
+            const submitterId = typeof item.submittedBy === "object"
+                ? (item.submittedBy?._id || item.submittedBy?.id)
+                : item.submittedBy;
+            if (!submitterId) return true; // In My Evidence context
+            const currentUserId = user.id || user._id;
+            return String(submitterId) === String(currentUserId);
+        }
+        return false;
+    };
+
+    // OPEN EVIDENCE DELETION MODAL
+    const promptDeleteEvidence = (item) => {
+        setDeleteModalEvidence(item);
+        setDeleteError("");
+        setDeleteSuccess("");
+    };
+
+    // CLOSE EVIDENCE DELETION MODAL
+    const closeDeleteModal = () => {
+        if (deleteLoading) return;
+        setDeleteModalEvidence(null);
+        setDeleteError("");
+        setDeleteSuccess("");
+    };
+
+    // EXECUTE EVIDENCE DELETION
+    const handleConfirmDelete = async () => {
+        if (!deleteModalEvidence || deleteLoading) return;
+
+        setDeleteLoading(true);
+        setDeleteError("");
+        setDeleteSuccess("");
+
+        try {
+            const response = await API.delete(`/evidence/${deleteModalEvidence._id}`);
+            setDeleteSuccess(
+                response.data.message ||
+                "Evidence record and associated file deleted successfully."
+            );
+
+            // Refresh user's evidence
+            await fetchMyEvidence();
+
+            // Also refresh investigator evidence if applicable
+            if (["investigator", "admin"].includes(user?.role)) {
+                fetchInvestigatorEvidence();
+            }
+
+            setTimeout(() => {
+                const deletedId = deleteModalEvidence._id;
+                setDeleteModalEvidence(null);
+                setDeleteSuccess("");
+
+                // If currently viewing deleted evidence details, return to My Evidence
+                if (activePage === "Evidence Details" && selectedEvidenceId === deletedId) {
+                    setActivePage("My Evidence");
+                    setSelectedEvidence(null);
+                }
+            }, 1200);
+
+        } catch (err) {
+            setDeleteError(
+                err.response?.data?.message ||
+                "Unable to delete evidence. Please try again."
+            );
+        } finally {
+            setDeleteLoading(false);
         }
     };
 
@@ -1019,12 +1104,25 @@ function App() {
                                         </td>
 
                                         <td>
-                                            <button
-                                                className="details-button"
-                                                onClick={() => openEvidenceDetails(item._id)}
-                                            >
-                                                View Details →
-                                            </button>
+                                            <div className="table-actions-cell">
+                                                <button
+                                                    className="details-button"
+                                                    onClick={() => openEvidenceDetails(item._id)}
+                                                >
+                                                    View Details →
+                                                </button>
+
+                                                {canDeleteEvidence(item) && (
+                                                    <button
+                                                        className="delete-evidence-button"
+                                                        onClick={() => promptDeleteEvidence(item)}
+                                                        disabled={deleteLoading}
+                                                        title="Delete this evidence record"
+                                                    >
+                                                        🗑 Delete
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -1414,12 +1512,24 @@ function App() {
 
         return (
             <div className="evidence-details-page">
-                <button
-                    className="text-button details-back-button"
-                    onClick={() => setActivePage("My Evidence")}
-                >
-                    ← Back to My Evidence
-                </button>
+                <div className="details-header-row">
+                    <button
+                        className="text-button details-back-button"
+                        onClick={() => setActivePage("My Evidence")}
+                    >
+                        ← Back to My Evidence
+                    </button>
+
+                    {canDeleteEvidence(item) && (
+                        <button
+                            className="delete-evidence-button"
+                            onClick={() => promptDeleteEvidence(item)}
+                            disabled={deleteLoading}
+                        >
+                            🗑 Delete Evidence
+                        </button>
+                    )}
+                </div>
 
                 {detailsLoading ? (
                     <div className="panel evidence-message">
@@ -1830,6 +1940,18 @@ function App() {
                                             >
                                                 Copy SHA-256
                                             </button>
+
+                                            {user?.role === "admin" && (
+                                                <button
+                                                    className="delete-evidence-button"
+                                                    type="button"
+                                                    onClick={() => promptDeleteEvidence(item)}
+                                                    disabled={deleteLoading}
+                                                    title="Admin Delete Evidence"
+                                                >
+                                                    🗑 Delete
+                                                </button>
+                                            )}
 
                                             {!isFinal ? (
                                                 <>
@@ -2381,6 +2503,89 @@ function App() {
                     </footer>
 
                 </div>
+
+                {/* DELETE EVIDENCE CONFIRMATION MODAL */}
+                {deleteModalEvidence && (
+                    <div className="delete-modal-backdrop" onClick={closeDeleteModal}>
+                        <div
+                            className="delete-modal-content"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="delete-modal-header">
+                                <div className="delete-modal-warning-icon">⚠</div>
+                                <div>
+                                    <h3>Delete Evidence Record</h3>
+                                    <p>Permanently remove evidence from ProofPath</p>
+                                </div>
+                                <button
+                                    className="delete-modal-close"
+                                    onClick={closeDeleteModal}
+                                    disabled={deleteLoading}
+                                    aria-label="Close"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            {deleteError && (
+                                <div className="delete-modal-message error-message">
+                                    {deleteError}
+                                </div>
+                            )}
+
+                            {deleteSuccess && (
+                                <div className="delete-modal-message success-message">
+                                    {deleteSuccess}
+                                </div>
+                            )}
+
+                            <div className="delete-modal-body">
+                                <div className="delete-evidence-summary">
+                                    <div className="delete-field">
+                                        <span className="delete-field-label">TITLE:</span>
+                                        <span className="delete-field-value">{deleteModalEvidence.title}</span>
+                                    </div>
+                                    <div className="delete-field">
+                                        <span className="delete-field-label">FILE NAME:</span>
+                                        <span className="delete-field-value">{deleteModalEvidence.fileName}</span>
+                                    </div>
+                                    {deleteModalEvidence.fileHash && (
+                                        <div className="delete-field">
+                                            <span className="delete-field-label">SHA-256:</span>
+                                            <span className="delete-field-value hash-code">
+                                                {deleteModalEvidence.fileHash.substring(0, 20)}...
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="delete-warning-banner">
+                                    <strong>Warning:</strong> This action is irreversible. The stored file will be permanently deleted from Cloudinary, the database record will be removed, and an immutable audit log entry of this deletion will be recorded.
+                                </div>
+                            </div>
+
+                            <div className="delete-modal-actions">
+                                <button
+                                    type="button"
+                                    className="delete-cancel-btn"
+                                    onClick={closeDeleteModal}
+                                    disabled={deleteLoading}
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="delete-confirm-btn"
+                                    onClick={handleConfirmDelete}
+                                    disabled={deleteLoading}
+                                >
+                                    {deleteLoading ? "Deleting..." : "Confirm & Delete"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );

@@ -448,6 +448,113 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ---------------- DELETE EVIDENCE ----------------
+
+  Future<void> confirmDeleteEvidence(dynamic item) async {
+    final title = item['title']?.toString() ?? 'Untitled Evidence';
+    final evidenceId = item['_id']?.toString() ?? item['id']?.toString() ?? '';
+
+    if (evidenceId.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF151F30),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: Colors.redAccent, width: 0.8),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 26),
+            SizedBox(width: 10),
+            Text(
+              'Delete Evidence',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete "$title"?',
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+              ),
+              child: const Text(
+                'This will permanently remove the evidence record from the database and delete the file from storage. An audit log will be retained.',
+                style: TextStyle(color: Colors.redAccent, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('proofpath_token');
+
+      if (token == null) {
+        throw Exception('Authentication session expired. Please log in again.');
+      }
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/evidence/$evidenceId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message']?.toString() ?? 'Evidence deleted successfully.'),
+            backgroundColor: Colors.green.shade700,
+          ),
+        );
+        fetchMyEvidence();
+      } else {
+        throw Exception(data['message']?.toString() ?? 'Failed to delete evidence.');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
+  }
+
   // ---------------- OPEN EVIDENCE DETAILS ----------------
 
   void openEvidenceDetails(dynamic item) {
@@ -524,6 +631,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final status = item['status']?.toString() ?? 'pending';
     final date = formatDate(item['createdAt']);
 
+    final currentRole = widget.user['role']?.toString().toLowerCase() ?? 'user';
+    final currentUserId = widget.user['id']?.toString() ?? widget.user['_id']?.toString() ?? '';
+    final submittedBy = item['submittedBy'];
+    final submittedById = submittedBy is Map
+        ? (submittedBy['_id']?.toString() ?? submittedBy['id']?.toString() ?? '')
+        : submittedBy?.toString() ?? '';
+
+    // Normal user can delete own uploaded evidence; Admin can delete any; Investigator cannot delete.
+    final bool canDelete = currentRole == 'admin' ||
+        (currentRole == 'user' && (submittedById.isEmpty || submittedById == currentUserId));
+
     return Card(
       color: const Color(0xFF151F30),
       margin: const EdgeInsets.only(bottom: 14),
@@ -597,16 +715,29 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => openEvidenceDetails(item),
-                icon: const Icon(Icons.visibility_outlined),
-                label: const Text('View Details'),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF00D4FF),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (canDelete) ...[
+                  TextButton.icon(
+                    onPressed: () => confirmDeleteEvidence(item),
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    label: const Text('Delete'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                TextButton.icon(
+                  onPressed: () => openEvidenceDetails(item),
+                  icon: const Icon(Icons.visibility_outlined),
+                  label: const Text('View Details'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF00D4FF),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),

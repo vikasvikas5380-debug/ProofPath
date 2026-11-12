@@ -56,6 +56,14 @@ const evidenceSchema = new mongoose.Schema(
             required: [true, "File URL is required"]
         },
 
+        cloudinaryPublicId: {
+            type: String
+        },
+
+        cloudinaryResourceType: {
+            type: String
+        },
+
         fileType: {
             type: String,
             required: [true, "File type is required"]

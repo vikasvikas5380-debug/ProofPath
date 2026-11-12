@@ -12,7 +12,8 @@ createEvidence,
 verifyEvidence,
 getMyEvidence,
 getEvidenceById,
-getPublicEvidenceVerification
+getPublicEvidenceVerification,
+deleteEvidence
 } = require("../controllers/evidenceController");
 
 const {
@@ -75,6 +76,13 @@ router.get(
 "/:id",
 protect,
 getEvidenceById
+);
+
+// Delete evidence (Admin or original uploader only)
+router.delete(
+"/:id",
+protect,
+deleteEvidence
 );
 
 module.exports = router;
