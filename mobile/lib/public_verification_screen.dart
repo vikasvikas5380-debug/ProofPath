@@ -18,7 +18,7 @@ class PublicVerificationScreen extends StatefulWidget {
 
 class _PublicVerificationScreenState
     extends State<PublicVerificationScreen> {
-  static const String baseUrl = 'http://192.168.1.100:5000/api';
+  static const String baseUrl = 'https://proofpath-api-gzaj.onrender.com/api';
 
   bool isLoading = true;
   String? errorMessage;

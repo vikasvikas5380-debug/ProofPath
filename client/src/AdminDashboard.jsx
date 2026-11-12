@@ -5,19 +5,32 @@ import "./AdminDashboard.css";
 function AdminDashboard({ currentUser }) {
     const [dashboard, setDashboard] = useState(null);
     const [users, setUsers] = useState([]);
+    const [selectedRole, setSelectedRole] = useState("all");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [actionLoading, setActionLoading] = useState("");
     const [success, setSuccess] = useState("");
 
-    const fetchAdminData = async () => {
+    // Modal state for creating investigator
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [newName, setNewName] = useState("");
+    const [newEmail, setNewEmail] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [createLoading, setCreateLoading] = useState(false);
+    const [createError, setCreateError] = useState("");
+    const [createSuccess, setCreateSuccess] = useState("");
+
+    const fetchAdminData = async (roleFilter = selectedRole) => {
         setLoading(true);
         setError("");
 
         try {
+            const userParams = roleFilter && roleFilter !== "all" ? { role: roleFilter } : {};
+
             const [statsResponse, usersResponse] = await Promise.all([
                 API.get("/admin/stats"),
-                API.get("/admin/users")
+                API.get("/admin/users", { params: userParams })
             ]);
 
             setDashboard(statsResponse.data.dashboard);
@@ -33,9 +46,16 @@ function AdminDashboard({ currentUser }) {
     };
 
     useEffect(() => {
-        fetchAdminData();
+        fetchAdminData(selectedRole);
     }, []);
 
+    // Filter change handler
+    const handleFilterChange = (role) => {
+        setSelectedRole(role);
+        fetchAdminData(role);
+    };
+
+    // Toggle user status (Activate / Deactivate)
     const handleUserStatus = async (user) => {
         const action = user.isActive ? "deactivate" : "activate";
 
@@ -58,8 +78,7 @@ function AdminDashboard({ currentUser }) {
             );
 
             setSuccess(response.data.message || `User ${action}d successfully.`);
-
-            await fetchAdminData();
+            await fetchAdminData(selectedRole);
         } catch (err) {
             setError(
                 err.response?.data?.message ||
@@ -68,6 +87,119 @@ function AdminDashboard({ currentUser }) {
         } finally {
             setActionLoading("");
         }
+    };
+
+    // Change user role
+    const handleRoleChange = async (user, newRole) => {
+        if (user.role === newRole) return;
+
+        if (
+            !window.confirm(
+                `Are you sure you want to change ${user.name}'s role from "${user.role}" to "${newRole}"?`
+            )
+        ) {
+            return;
+        }
+
+        setActionLoading(user._id);
+        setError("");
+        setSuccess("");
+
+        try {
+            const response = await API.patch(`/admin/users/${user._id}/role`, {
+                role: newRole
+            });
+
+            setSuccess(
+                response.data.message ||
+                `User role updated to ${newRole} successfully.`
+            );
+
+            await fetchAdminData(selectedRole);
+        } catch (err) {
+            setError(
+                err.response?.data?.message ||
+                `Unable to update role for ${user.name}.`
+            );
+        } finally {
+            setActionLoading("");
+        }
+    };
+
+    // Create Investigator submission
+    const handleCreateInvestigator = async (e) => {
+        e.preventDefault();
+        setCreateError("");
+        setCreateSuccess("");
+
+        if (!newName.trim() || !newEmail.trim() || !newPassword || !confirmPassword) {
+            setCreateError("All fields are required.");
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newEmail.trim())) {
+            setCreateError("Please enter a valid email address.");
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            setCreateError("Password must be at least 8 characters.");
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            setCreateError("Passwords do not match.");
+            return;
+        }
+
+        setCreateLoading(true);
+
+        try {
+            const response = await API.post("/admin/users", {
+                name: newName.trim(),
+                email: newEmail.trim(),
+                password: newPassword,
+                role: "investigator"
+            });
+
+            setCreateSuccess(
+                response.data.message || "Investigator account created successfully!"
+            );
+
+            // Clear passwords immediately
+            setNewPassword("");
+            setConfirmPassword("");
+            setNewName("");
+            setNewEmail("");
+
+            // Refresh dashboard
+            await fetchAdminData(selectedRole);
+
+            setTimeout(() => {
+                setShowCreateModal(false);
+                setCreateSuccess("");
+            }, 1200);
+
+        } catch (err) {
+            setCreateError(
+                err.response?.data?.message ||
+                "Failed to create investigator account."
+            );
+        } finally {
+            setCreateLoading(false);
+        }
+    };
+
+    const closeCreateModal = () => {
+        if (createLoading) return;
+        setShowCreateModal(false);
+        setNewName("");
+        setNewEmail("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setCreateError("");
+        setCreateSuccess("");
     };
 
     const formatDate = (date) => {
@@ -101,13 +233,26 @@ function AdminDashboard({ currentUser }) {
                     <p>Monitor users, evidence records and platform activity.</p>
                 </div>
 
-                <button
-                    className="admin-refresh-button"
-                    onClick={fetchAdminData}
-                    disabled={loading}
-                >
-                    {loading ? "Refreshing..." : "↻ Refresh"}
-                </button>
+                <div className="admin-actions-group">
+                    <button
+                        className="admin-create-button"
+                        onClick={() => {
+                            setCreateError("");
+                            setCreateSuccess("");
+                            setShowCreateModal(true);
+                        }}
+                    >
+                        <span>＋</span> Create Investigator
+                    </button>
+
+                    <button
+                        className="admin-refresh-button"
+                        onClick={() => fetchAdminData(selectedRole)}
+                        disabled={loading}
+                    >
+                        {loading ? "Refreshing..." : "↻ Refresh"}
+                    </button>
+                </div>
             </section>
 
             {error && (
@@ -211,15 +356,36 @@ function AdminDashboard({ currentUser }) {
 
             <section className="panel admin-users-panel">
 
-                <div className="panel-header">
+                <div className="panel-header admin-users-header">
                     <div>
                         <h3>User Management</h3>
-                        <p>View registered users and manage account access.</p>
+                        <p>View registered users and manage account access and roles.</p>
                     </div>
 
-                    <span className="admin-user-count">
-                        {users.length} Users
-                    </span>
+                    <div className="admin-users-header-controls">
+                        {/* ROLE FILTERS */}
+                        <div className="admin-filter-bar">
+                            {[
+                                { label: "All", value: "all" },
+                                { label: "Users", value: "user" },
+                                { label: "Investigators", value: "investigator" },
+                                { label: "Admins", value: "admin" }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.value}
+                                    className={`admin-filter-tab ${selectedRole === tab.value ? "active" : ""}`}
+                                    onClick={() => handleFilterChange(tab.value)}
+                                    disabled={loading}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <span className="admin-user-count">
+                            {users.length} Users
+                        </span>
+                    </div>
                 </div>
 
                 {loading && users.length === 0 ? (
@@ -228,7 +394,7 @@ function AdminDashboard({ currentUser }) {
                     </div>
                 ) : users.length === 0 ? (
                     <div className="evidence-message">
-                        No registered users found.
+                        No registered users found for the selected filter.
                     </div>
                 ) : (
                     <div className="table-container">
@@ -266,9 +432,25 @@ function AdminDashboard({ currentUser }) {
                                             </td>
 
                                             <td>
-                                                <span className={`admin-role-badge ${user.role}`}>
-                                                    {user.role}
-                                                </span>
+                                                <div className="admin-role-control">
+                                                    {isCurrentUser ? (
+                                                        <span className={`admin-role-badge ${user.role}`}>
+                                                            {user.role} (Current)
+                                                        </span>
+                                                    ) : (
+                                                        <select
+                                                            className={`admin-role-select ${user.role}`}
+                                                            value={user.role}
+                                                            disabled={isBusy}
+                                                            onChange={(e) => handleRoleChange(user, e.target.value)}
+                                                            title="Change user role"
+                                                        >
+                                                            <option value="user">User</option>
+                                                            <option value="investigator">Investigator</option>
+                                                            <option value="admin">Admin</option>
+                                                        </select>
+                                                    )}
+                                                </div>
                                             </td>
 
                                             <td className="date-cell">
@@ -313,8 +495,123 @@ function AdminDashboard({ currentUser }) {
 
             <div className="admin-security-note">
                 <span>⬡</span>
-                Account management actions are restricted to administrators.
+                Account management actions and role assignments are restricted to administrators.
             </div>
+
+            {/* CREATE INVESTIGATOR MODAL */}
+            {showCreateModal && (
+                <div className="admin-modal-backdrop" onClick={closeCreateModal}>
+                    <div
+                        className="admin-modal-content"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="admin-modal-header">
+                            <div>
+                                <span className="admin-eyebrow">NEW ACCOUNT</span>
+                                <h3>Create Investigator Account</h3>
+                            </div>
+                            <button
+                                className="admin-modal-close"
+                                onClick={closeCreateModal}
+                                disabled={createLoading}
+                                aria-label="Close modal"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {createError && (
+                            <div className="admin-message admin-error">
+                                {createError}
+                            </div>
+                        )}
+
+                        {createSuccess && (
+                            <div className="admin-message admin-success">
+                                {createSuccess}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleCreateInvestigator} className="admin-modal-form">
+                            <div className="admin-form-group">
+                                <label htmlFor="inv-name">Full Name</label>
+                                <input
+                                    id="inv-name"
+                                    type="text"
+                                    placeholder="e.g. Jane Doe"
+                                    value={newName}
+                                    onChange={(e) => setNewName(e.target.value)}
+                                    disabled={createLoading}
+                                    required
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="admin-form-group">
+                                <label htmlFor="inv-email">Email Address</label>
+                                <input
+                                    id="inv-email"
+                                    type="email"
+                                    placeholder="e.g. investigator@proofpath.com"
+                                    value={newEmail}
+                                    onChange={(e) => setNewEmail(e.target.value)}
+                                    disabled={createLoading}
+                                    required
+                                />
+                            </div>
+
+                            <div className="admin-form-row">
+                                <div className="admin-form-group">
+                                    <label htmlFor="inv-password">Password (min 8 chars)</label>
+                                    <input
+                                        id="inv-password"
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        disabled={createLoading}
+                                        required
+                                        minLength={8}
+                                    />
+                                </div>
+
+                                <div className="admin-form-group">
+                                    <label htmlFor="inv-confirm-password">Confirm Password</label>
+                                    <input
+                                        id="inv-confirm-password"
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        disabled={createLoading}
+                                        required
+                                        minLength={8}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="admin-modal-actions">
+                                <button
+                                    type="button"
+                                    className="admin-button-cancel"
+                                    onClick={closeCreateModal}
+                                    disabled={createLoading}
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    className="admin-button-submit"
+                                    disabled={createLoading}
+                                >
+                                    {createLoading ? "Creating Account..." : "Create Investigator"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

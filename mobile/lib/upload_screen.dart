@@ -22,7 +22,7 @@ class UploadScreen extends StatefulWidget {
 }
 
 class _UploadScreenState extends State<UploadScreen> {
-  static const String baseUrl = 'http://192.168.1.100:5000/api';
+  static const String baseUrl = 'https://proofpath-api-gzaj.onrender.com/api';
 
   final titleController = TextEditingController();
   final descriptionController = TextEditingController();

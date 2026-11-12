@@ -3,9 +3,22 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 // Generate JWT Token
-const generateToken = (userId) => {
+const generateToken = (userId, role) => {
+    let id = userId;
+    let userRole = role;
+
+    if (userId && typeof userId === "object" && userId.role && !role) {
+        id = userId._id;
+        userRole = userId.role;
+    }
+
+    const payload = {
+        id: id ? id.toString() : id,
+        ...(userRole ? { role: userRole } : {})
+    };
+
     return jwt.sign(
-        { id: userId },
+        payload,
         process.env.JWT_SECRET,
         { expiresIn: "7d" }
     );
@@ -51,7 +64,7 @@ const registerUser = async (req, res) => {
             password: hashedPassword
         });
 
-        const token = generateToken(user._id);
+        const token = generateToken(user._id, user.role);
 
         return res.status(201).json({
             success: true,
@@ -110,7 +123,7 @@ const loginUser = async (req, res) => {
             });
         }
 
-        const token = generateToken(user._id);
+        const token = generateToken(user._id, user.role);
 
         return res.status(200).json({
             success: true,

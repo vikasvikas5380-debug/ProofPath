@@ -45,7 +45,7 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  static const String baseUrl = 'http://192.168.1.100:5000/api';
+static const String baseUrl = 'https://proofpath-api-gzaj.onrender.com/api';
 
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -343,7 +343,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const String baseUrl = 'http://192.168.1.100:5000/api';
+  static const String baseUrl = 'https://proofpath-api-gzaj.onrender.com/api';
 
   List<dynamic> evidenceList = [];
 
